@@ -9,6 +9,7 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.io.wavfile import write
+from scipy.fft import fft, fftfreq
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
 import io
 import av # Important for handling audio frames
@@ -33,6 +34,7 @@ Use one device (like your phone) to **Transmit** a signal, and another (like you
 
 # Create two columns for our dashboard layout
 col1, col2 = st.columns([0.8, 1]) # Make the right column slightly wider
+
 # ======================================================
 #                        TRANSMIT PANEL
 # ======================================================
@@ -59,7 +61,6 @@ with col1:
             # 3. Play the audio using Streamlit's built-in audio player
             st.audio(virtual_file)
             st.success(f"Transmitting '{emergency_name}' signal...")
-
 
 # ======================================================
 #                        RECEIVE PANEL
@@ -95,41 +96,47 @@ with col2:
     strength_indicator = st.empty()
     graph_indicator = st.empty()
 
-    if webrtc_ctx.state.playing and webrtc_ctx.audio_processor:
-        # If the microphone is active and the processor is running...
-        
-        # Check if we have audio in the buffer
-        if webrtc_ctx.audio_processor.audio_buffer:
-            # Concatenate all recent audio chunks into one large chunk for analysis
-            audio_chunk = np.concatenate(webrtc_ctx.audio_processor.audio_buffer)
-            # Clear the buffer to prepare for the next chunks
-            webrtc_ctx.audio_processor.audio_buffer.clear()
-            
-            # --- Perform the analysis using our utility function ---
-            detected_name, peak_freq, peak_power = analyze_and_detect_chirp(audio_chunk, SAMPLE_RATE)
-            
-            # --- Update the UI based on the results ---
-            if detected_name:
-                status_indicator.success(f"✅ STATUS: DETECTED - **{detected_name}**")
-                # Normalize strength for the progress bar (max value is tuned by testing)
-                strength_normalized = min(peak_power / 10000.0, 1.0)
-                strength_indicator.progress(strength_normalized, text=f"Signal Strength: {int(strength_normalized * 100)}%")
-            else:
-                status_indicator.info("ℹ️ STATUS: Listening... No known signal detected.")
-                strength_indicator.progress(0, text="Signal Strength: 0%")
+    # This is the main logic loop for the receiver
+    if webrtc_ctx.state.playing:
+        # Check if the audio processor has been successfully created
+        if webrtc_ctx.audio_processor:
+            # Check if we have audio in the buffer to process
+            if webrtc_ctx.audio_processor.audio_buffer:
+                
+                # Concatenate all recent audio chunks into one for analysis
+                audio_chunk = np.concatenate(webrtc_ctx.audio_processor.audio_buffer)
+                webrtc_ctx.audio_processor.audio_buffer.clear() # Clear buffer for next round
+                
+                # --- Perform the analysis using our utility function ---
+                detected_name, peak_freq, peak_power = analyze_and_detect_chirp(audio_chunk, SAMPLE_RATE)
+                
+                # --- Update the UI based on the results ---
+                if detected_name:
+                    status_indicator.success(f"✅ STATUS: DETECTED - **{detected_name}**")
+                    # Normalize strength for the progress bar (max value is tuned by testing)
+                    strength_normalized = min(peak_power / 10000.0, 1.0)
+                    strength_indicator.progress(strength_normalized, text=f"Signal Strength: {int(strength_normalized * 100)}%")
+                else:
+                    status_indicator.info("ℹ️ STATUS: Listening... No known signal detected.")
+                    strength_indicator.progress(0, text="Signal Strength: 0%")
 
-            # --- Update the Frequency Spectrum Graph ---
-            # Create a simple matplotlib graph of the FFT results
-            fig, ax = plt.subplots(figsize=(10,3))
-            N = len(audio_chunk)
-            yf = np.abs(fft(audio_chunk))
-            xf = fftfreq(N, 1/SAMPLE_RATE)
-            ax.plot(xf[:N//2], yf[:N//2]) # Plot only positive frequencies
-            ax.set_title("Live Audio Frequency Spectrum")
-            ax.set_xlabel("Frequency (Hz)")
-            ax.set_ylabel("Power")
-            ax.set_ylim(0, 15000) # Set a fixed y-axis limit for stable visualization
-            ax.set_xlim(14000, 21000) # Zoom in on our emergency frequency range
-            graph_indicator.pyplot(fig)
-            plt.close(fig) # Important to close the figure to free up memory
-
+                # --- Update the Frequency Spectrum Graph ---
+                fig, ax = plt.subplots(figsize=(10,3))
+                N = len(audio_chunk)
+                if N > 0:
+                    yf = np.abs(fft(audio_chunk))
+                    xf = fftfreq(N, 1/SAMPLE_RATE)
+                    ax.plot(xf[:N//2], yf[:N//2]) # Plot only positive frequencies
+                ax.set_title("Live Audio Frequency Spectrum")
+                ax.set_xlabel("Frequency (Hz)")
+                ax.set_ylabel("Power")
+                ax.set_ylim(0, 15000) # Set a fixed y-axis limit for stable visualization
+                ax.set_xlim(14000, 21000) # Zoom in on our emergency frequency range
+                graph_indicator.pyplot(fig)
+                plt.close(fig) # Important to close the figure to free up memory
+        else:
+            # This message shows if the mic is not properly activated
+            status_indicator.warning("⚠️ Audio receiver is not ready. Please try restarting or check browser/OS microphone permissions.")
+    else:
+        # This is the default message before the user clicks "START"
+        status_indicator.info("ℹ️ STATUS: Receiver is idle. Click 'START' to activate microphone.")
