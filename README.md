@@ -1,2 +1,2 @@
 # EchoSOS_WebApp
-EchoSOS WebApp using Streamlit + Google Colab + GitHub
+Interactive prototype for the EchoSOS acoustic rescue beacon project
