@@ -49,8 +49,6 @@ def set_background(image_url):
     }}
 
     </style>
-    """,
-    """
     
     # Inject the CSS into the Streamlit app
     st.markdown(page_bg_img_style, unsafe_allow_html=True)
