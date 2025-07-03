@@ -57,49 +57,34 @@ def generate_chirp(emergency_name: str) -> np.ndarray:
 
 # --- 3. Signal Detection Function ---
 
-def analyze_and_detect_chirp(audio_data: np.ndarray, sample_rate: int) -> tuple:
+# --- 3. Signal Detection Function (Updated) ---
+
+def analyze_and_detect_chirp(audio_data: np.ndarray, sample_rate: int, custom_threshold: int = 500) -> tuple:
     """
     Analyzes a chunk of audio and identifies which, if any, emergency chirp is present.
-
-    This function performs a Fast Fourier Transform (FFT) to find the dominant frequency
-    and compares it against the known emergency signal ranges.
-
-    Args:
-        audio_data (np.ndarray): The audio signal to analyze.
-        sample_rate (int): The sample rate of the audio data.
-
-    Returns:
-        tuple: A tuple containing (detected_name, peak_frequency, peak_power).
-               - `detected_name` (str or None): The name of the detected emergency or None.
-               - `peak_frequency` (float): The frequency with the most power.
-               - `peak_power` (float): The power of the peak frequency.
+    Now accepts a custom power threshold.
     """
     N = len(audio_data)
     if N == 0:
         return None, 0, 0
 
-    # Perform FFT
     yf = fft(audio_data)
     xf = fftfreq(N, 1 / sample_rate)
 
-    # Isolate positive frequencies and their magnitudes
     positive_mask = xf > 0
     xf_positive = xf[positive_mask]
     yf_positive = np.abs(yf[positive_mask])
 
-    # Find the peak frequency and its power
     peak_index = np.argmax(yf_positive)
     peak_freq = xf_positive[peak_index]
     peak_power = yf_positive[peak_index]
 
-    # Check if the signal is strong enough to be considered
-    if peak_power < POWER_THRESHOLD:
+    # Use the custom_threshold passed from the app instead of the hardcoded one
+    if peak_power < custom_threshold:
         return None, peak_freq, peak_power
 
-    # Check if the peak frequency falls into any of our defined emergency ranges
     for name, (start_freq, end_freq) in EMERGENCIES.items():
         if start_freq <= peak_freq <= end_freq:
             return name, peak_freq, peak_power
 
-    # If the signal is strong but unrecognized, label it as "Unknown"
     return "Unknown Signal", peak_freq, peak_power
