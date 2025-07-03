@@ -18,27 +18,42 @@ import av # Important for handling audio frames
 # This is where we use the logic we built and tested!
 from audio_utils import generate_chirp, analyze_and_detect_chirp, EMERGENCIES, SAMPLE_RATE
 
+
 # --- Function to set the background image ---
 def set_background(image_url):
     """
-    Sets a background image for the Streamlit app.
+    Sets a background image for the Streamlit app using a more robust method.
     """
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url("{image_url}");
-            background-attachment: fixed;
-            background-size: cover;
-        }}
-        h1, h2, h3, p, label {{
-            color: white !important;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    # Define the CSS style as a multi-line f-string
+    page_bg_img_style = f"""
+    <style>
+    .stApp {{
+        background-image: url("{image_url}");
+        background-attachment: fixed;
+        background-size: cover;
+    }}
+
+    /* Target main text and headers */
+    h1, h2, h3, h4, h5, h6, p, label {{
+        color: white !important;
+    }}
+
+    /* Improve visibility of Markdown text within the main body */
+    .stMarkdown {{
+        color: white !important;
+    }}
+
+    /* Style the expander headers for better contrast */
+    .st-emotion-cache-1gulkj5 {{
+        color: white !important;
+    }}
+
+    </style>
+    """,
     """
+    
+    # Inject the CSS into the Streamlit app
+    st.markdown(page_bg_img_style, unsafe_allow_html=True)
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -55,7 +70,7 @@ st.title("🚨 EchoSOS: Acoustic Rescue Beacon Dashboard")
 st.write("""
 <p style="color:white;">This interactive prototype demonstrates the core EchoSOS technology. 
 Use one device (like your phone) to <strong>Transmit</strong> a signal, and another (like your laptop) to <strong>Receive</strong> and analyze it.</p>
-""", unsafe_allow_html=True)
+""")
 
 # Create two columns for our dashboard layout
 col1, col2 = st.columns([0.8, 1]) # Make the right column slightly wider
