@@ -19,32 +19,53 @@ import av  # Important for handling audio frames
 from audio_utils import generate_chirp, analyze_and_detect_chirp, EMERGENCIES, SAMPLE_RATE
 
 
-# --- Function to set the background image ---
-def set_background(image_url):
+# --- Function to set the background image and styles ---
+def set_page_styling():
     """
-    Sets a background image for the Streamlit app using a more robust method.
+    Injects custom CSS to style the app for a professional, dark-themed look.
     """
+    image_url = "https://images.pexels.com/photos/998641/pexels-photo-998641.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+    
     # Define the CSS style as a multi-line f-string
-    page_bg_img_style = f"""
+    page_styling = f"""
     <style>
+    /* Main App Background */
     .stApp {{
         background-image: url("{image_url}");
         background-attachment: fixed;
         background-size: cover;
     }}
-    /* Target main text and headers for better visibility on dark background */
+    /* Main text and headers - making them white for visibility */
     h1, h2, h3, h4, h5, h6, p, label {{
         color: white !important;
     }}
-    /* Ensure markdown text is also white */
+    /* Markdown text in the main body */
     .stMarkdown {{
         color: white !important;
     }}
+    /* Styling for the buttons in the Transmit Panel */
+    .stButton > button {{
+        color: #FFFFFF !important; /* White text */
+        background-color: #d13639 !important; /* Primary red color */
+        border: 2px solid #FFFFFF !important; /* White border */
+        font-weight: bold !important;
+        border-radius: 10px !important;
+    }}
+    .stButton > button:hover {{
+        background-color: #a82a2d !important; /* Darker red on hover */
+        border-color: #CCCCCC !important;
+    }}
+    /* Styling for the status boxes (st.info, st.success, st.warning) */
+    .st-emotion-cache-1wivap2, .st-emotion-cache-zt5igj, .st-emotion-cache-j7qwjs {{
+        background-color: rgba(0, 0, 0, 0.6) !important; /* Semi-transparent black background */
+        border: 1px solid #d13639 !important; /* Red border to match theme */
+        border-radius: 10px !important;
+    }}
     </style>
-    """ 
+    """
     
     # Inject the CSS into the Streamlit app
-    st.markdown(page_bg_img_style, unsafe_allow_html=True)
+    st.markdown(page_styling, unsafe_allow_html=True)
 
 
 # --- Page Configuration ---
@@ -54,13 +75,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- Call the function to set our custom background ---
-set_background("https://images.pexels.com/photos/998641/pexels-photo-998641.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2")
+# --- Apply our custom styling ---
+set_page_styling()
 
 
 # --- Main App UI ---
 st.title("🚨 EchoSOS: Acoustic Rescue Beacon Dashboard")
-st.write(f"""
+st.write("""
 This interactive prototype demonstrates the core EchoSOS technology. 
 Use one device (like your phone) to **Transmit** a signal, and another (like your laptop) to **Receive** and analyze it.
 """)
@@ -134,12 +155,15 @@ with col2:
                 if N > 0:
                     yf = np.abs(fft(audio_chunk))
                     xf = fftfreq(N, 1 / SAMPLE_RATE)
-                    ax.plot(xf[:N // 2], yf[:N // 2])
-                ax.set_title("Live Audio Frequency Spectrum")
-                ax.set_xlabel("Frequency (Hz)")
-                ax.set_ylabel("Power")
+                    ax.plot(xf[:N // 2], yf[:N // 2], color="#d13639") # Use theme color for graph line
+                ax.set_title("Live Audio Frequency Spectrum", color="white")
+                ax.set_xlabel("Frequency (Hz)", color="white")
+                ax.set_ylabel("Power", color="white")
+                ax.tick_params(colors='white') # Make tick numbers white
                 ax.set_ylim(0, 15000)
                 ax.set_xlim(14000, 21000)
+                fig.patch.set_alpha(0.0) # Make figure background transparent
+                ax.set_facecolor((0, 0, 0, 0.5)) # Semi-transparent black background for plot area
                 graph_indicator.pyplot(fig)
                 plt.close(fig)
         else:
