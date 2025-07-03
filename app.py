@@ -41,7 +41,7 @@ def set_background(image_url):
         color: white !important;
     }}
     </style>
-    """  """# <--- THIS IS THE CLOSING """ THAT WAS MISSING.
+    """  """
     
     # Inject the CSS into the Streamlit app
     st.markdown(page_bg_img_style, unsafe_allow_html=True)
