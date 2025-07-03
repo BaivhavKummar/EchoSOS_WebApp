@@ -21,7 +21,7 @@ EMERGENCIES = {
 
 # Standard audio parameters used throughout the application.
 SAMPLE_RATE = 44100
-DURATION = 0.5  # seconds
+DURATION = 30  # seconds
 
 # The power threshold for detecting a signal. Can be tuned.
 POWER_THRESHOLD = 500
