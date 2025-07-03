@@ -41,20 +41,27 @@ if "refresh_key" not in st.session_state:
 
 # --- Main App UI ---
 st.title("🚨 EchoSOS: Acoustic Rescue Beacon Dashboard")
-# ... Title/Intro text ...
+st.write("""
+This interactive prototype demonstrates the core EchoSOS technology. 
+Use one device (like your phone) to **Transmit** a signal, and another (like your laptop) to **Receive** and analyze it.
+""")
 
 col1, col2 = st.columns([0.8, 1])
 
-# --- TRANSMIT PANEL ---
+# ======================================================
+#                        TRANSMIT PANEL
+# ======================================================
 with col1:
-    # ... (This panel is unchanged) ...
     st.header("TRANSMIT PANEL")
     st.markdown("Select an emergency to broadcast its unique acoustic signal.")
     for emergency_name in EMERGENCIES.keys():
         if st.button(f"Broadcast: {emergency_name}", use_container_width=True):
-            # ... (button logic is unchanged) ...
-            pass # Placeholder for your existing code
-
+            chirp_signal = generate_chirp(emergency_name)
+            virtual_file = io.BytesIO()
+            scaled_audio = np.int16(chirp_signal / np.max(np.abs(chirp_signal)) * 32767)
+            write(virtual_file, SAMPLE_RATE, scaled_audio)
+            st.audio(virtual_file)
+            st.success(f"Transmitting '{emergency_name}' signal...")
 
 # ======================================================
 #                        RECEIVE PANEL (with Debug Mode)
@@ -67,12 +74,12 @@ with col2:
     st.markdown("---")
     debug_mode = st.checkbox("Show Debug Information")
     
-    # Allow user to set threshold live in the app. Default to 500.
+    # Allow user to set threshold live in the app.
     power_threshold = st.number_input(
-        label="Detection Power Threshold",
+        label="Detection Power Threshold (Lower to make it more sensitive)",
         min_value=50,
         max_value=5000,
-        value=500, # Our original guess
+        value=500, # A reasonable starting guess
         step=50
     )
     st.markdown("---")
@@ -103,6 +110,7 @@ with col2:
 
     if webrtc_ctx.state.playing and webrtc_ctx.audio_processor:
         if webrtc_ctx.audio_processor.audio_buffer:
+            
             audio_chunk = np.concatenate(webrtc_ctx.audio_processor.audio_buffer)
             webrtc_ctx.audio_processor.audio_buffer.clear()
             
@@ -112,19 +120,38 @@ with col2:
             
             # --- Display Debug Info if toggled ---
             if debug_mode:
-                debug_indicator.info(f"Live Peak Power: {peak_power:.0f} | Live Peak Freq: {peak_freq:.0f} Hz")
+                debug_indicator.info(f"Live Peak Power: {peak_power:.0f} | Live Peak Freq: {peak_freq:.0f} Hz | Threshold: {power_threshold}")
             else:
                 debug_indicator.empty()
 
-            # --- Update UI ---
+            # --- Update UI based on Analysis ---
             if detected_name:
-                # ... (rest of UI update logic is unchanged) ...
-                pass # Placeholder
+                status_indicator.success(f"✅ STATUS: DETECTED - **{detected_name}**")
+                strength_normalized = min(peak_power / (power_threshold * 20), 1.0) # Normalize relative to threshold
+                strength_indicator.progress(strength_normalized, text=f"Signal Strength: {int(strength_normalized * 100)}%")
             else:
-                # ...
-                pass # Placeholder
+                status_indicator.info("ℹ️ STATUS: Listening... No known signal detected.")
+                strength_indicator.progress(0, text="Signal Strength: 0%")
 
-        #... (Full UI update and graph logic remains here)...
-        
+            # --- Update Frequency Spectrum Graph ---
+            fig, ax = plt.subplots(figsize=(10, 3))
+            N = len(audio_chunk)
+            if N > 0:
+                yf = np.abs(fft(audio_chunk))
+                xf = fftfreq(N, 1 / SAMPLE_RATE)
+                ax.plot(xf[:N // 2], yf[:N // 2], color="#d13639")
+            ax.set_title("Live Audio Frequency Spectrum", color="white")
+            ax.set_xlabel("Frequency (Hz)", color="white")
+            ax.set_ylabel("Power", color="white")
+            ax.tick_params(colors='white')
+            ax.set_ylim(0, 15000)
+            ax.set_xlim(14000, 21000)
+            fig.patch.set_alpha(0.0)
+            ax.set_facecolor((0, 0, 0, 0.5))
+            graph_indicator.pyplot(fig)
+            plt.close(fig)
+        else:
+            status_indicator.info("ℹ️ STATUS: Receiver is active. Listening...")
+            strength_indicator.progress(0, text="Signal Strength: 0%")
     else:
         status_indicator.warning("⚠️ STATUS: Receiver is OFF. Click 'START' above to activate microphone.")
