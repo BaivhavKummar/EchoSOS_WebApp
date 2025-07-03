@@ -18,6 +18,28 @@ import av # Important for handling audio frames
 # This is where we use the logic we built and tested!
 from audio_utils import generate_chirp, analyze_and_detect_chirp, EMERGENCIES, SAMPLE_RATE
 
+# --- Function to set the background image ---
+def set_background(image_url):
+    """
+    Sets a background image for the Streamlit app.
+    """
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("{image_url}");
+            background-attachment: fixed;
+            background-size: cover;
+        }}
+        h1, h2, h3, p, label {{
+            color: white !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    """
+
 # --- Page Configuration ---
 st.set_page_config(
     page_title="EchoSOS Dashboard",
@@ -25,12 +47,15 @@ st.set_page_config(
     layout="wide"
 )
 
+# --- Call the function to set our custom background ---
+set_background("https://images.pexels.com/photos/998641/pexels-photo-998641.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2")
+
 # --- Main App UI ---
 st.title("🚨 EchoSOS: Acoustic Rescue Beacon Dashboard")
 st.write("""
-This interactive prototype demonstrates the core EchoSOS technology. 
-Use one device (like your phone) to **Transmit** a signal, and another (like your laptop) to **Receive** and analyze it.
-""")
+<p style="color:white;">This interactive prototype demonstrates the core EchoSOS technology. 
+Use one device (like your phone) to <strong>Transmit</strong> a signal, and another (like your laptop) to <strong>Receive</strong> and analyze it.</p>
+""", unsafe_allow_html=True)
 
 # Create two columns for our dashboard layout
 col1, col2 = st.columns([0.8, 1]) # Make the right column slightly wider
